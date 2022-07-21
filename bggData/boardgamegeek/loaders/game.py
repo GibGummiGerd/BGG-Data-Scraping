@@ -90,7 +90,7 @@ def create_game_from_xml(xml_root, game_id):
     # look for the statistics
     stats = xml_root.find("statistics/ratings")
     if stats is not None:
-        sd = {
+        statsData = {
             "usersrated": xml_subelement_attr(stats, "usersrated", convert=int, quiet=True),
             "average": xml_subelement_attr(stats, "average", convert=float, quiet=True),
             "bayesaverage": xml_subelement_attr(stats, "bayesaverage", convert=float, quiet=True),
@@ -112,18 +112,18 @@ def create_game_from_xml(xml_root, game_id):
                 rank_value = int(rank.attrib.get("value"))
             except:
                 rank_value = None
-            sd["ranks"].append({"id": rank.attrib["id"],
+            statsData["ranks"].append({"id": rank.attrib["id"],
                                 "name": rank.attrib["name"],
                                 "friendlyname": rank.attrib.get("friendlyname"),
                                 "value": rank_value})
 
-        data["stats"] = sd
+        data["stats"] = statsData
         data["suggested_players"] = {}
 
         suggested_players_poll = xml_root.find("poll[@name='suggested_numplayers']")
         if suggested_players_poll is not None:
-            dsp = data["suggested_players"]
-            dsp.update({"total_votes": int(suggested_players_poll.attrib.get("totalvotes", 0)),
+            dataSuggestedPlayers = data["suggested_players"]
+            dataSuggestedPlayers.update({"total_votes": int(suggested_players_poll.attrib.get("totalvotes", 0)),
                         "results": {}})
 
             for results in suggested_players_poll.findall("results"):
@@ -143,7 +143,7 @@ def create_game_from_xml(xml_root, game_id):
                     elif kind == "Not Recommended":
                         dspr["not_recommended_rating"] = votes
 
-                dsp["results"][player_count] = dspr
+                dataSuggestedPlayers["results"][player_count] = dspr
 
     return BoardGame(data)
 
