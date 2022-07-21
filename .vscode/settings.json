@@ -1,0 +1,17 @@
+
+{
+    "python.linting.enabled": true,
+    "python.linting.pylintEnabled": true,
+    "python.linting.flake8Enabled": false,
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/CVS": true,
+        "**/.DS_Store": true,
+        "**/*.pyc": true,
+        "**/__pycache__": true
+    },
+    "python.pythonPath": "C:\\Users\\Christian\\.virtualenvs",
+    "python.venvPath": "C:\\Users\\Christian\\.virtualenvs"
+}
