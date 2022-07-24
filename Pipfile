@@ -8,13 +8,15 @@ requests = "*"
 requests-cache = "*"
 bs4 = "*"
 selenium = "*"
+webdriver-manager = "*"
+lxml = "*"
 
 [dev-packages]
 pylint = "*"
 black = "*"
 
 [requires]
-python_version = "3.8"
+python_version = "3.10"
 
 [pipenv]
 allow_prereleases = true
