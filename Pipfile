@@ -10,6 +10,7 @@ bs4 = "*"
 selenium = "*"
 webdriver-manager = "*"
 lxml = "*"
+pandas = "*"
 
 [dev-packages]
 pylint = "*"
