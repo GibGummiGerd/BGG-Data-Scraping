@@ -1,6 +1,7 @@
 """bgg.py"""
 
 from datetime import datetime
+import time
 import os
 import json
 import requests
@@ -25,17 +26,30 @@ def create_data_structure(user_item_bytes: bytes) -> list:
         comment = user_item["textfield"]["comment"]["value"]
         if comment is not None:
             comment = comment.strip().replace("\n", " ")
+
+        status = user_item["status"]
+        own = False
+        prevowned = False
+        wishlist = False
+        for key in status:
+            match key:
+                case "own":
+                    own = True
+                case "prevowned":
+                    prevowned = True
+                case "wishlist":
+                    wishlist = True
+
         user_item = {
+            "rating": user_item["rating"],
             "username": user_item["user"]["username"],
             "country": user_item["user"]["country"],
-            "rating": user_item["rating"],
-            "status": user_item["status"],
+            "own": own,
+            "prevowned": prevowned,
+            "wishlist": wishlist,
             "textfield": comment,
             "rating_tstamp": user_item["rating_tstamp"],
-            "tstamp": user_item["tstamp"],
-            "lastmodified": user_item["lastmodified"],
             "comment_tstamp": user_item["comment_tstamp"],
-            "review_tstamp": user_item["review_tstamp"],
         }
         user_items.append(user_item)
 
@@ -43,13 +57,16 @@ def create_data_structure(user_item_bytes: bytes) -> list:
 
 
 def flow():
-    game_id = "167355"
+    game_id = "292974"
 
     i = 1
-    output_path = "rating_items.csv"
+    output_path = "tournament_at_avalon_rating_items.csv"
     found_items = True
     start_time = datetime.now()
+
     while found_items:
+
+        time.sleep(5)
 
         json_bytes = call_stuff(game_id, i)
 
