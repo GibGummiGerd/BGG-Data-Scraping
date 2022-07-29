@@ -9,14 +9,30 @@ import requests
 import pandas
 from bs4 import BeautifulSoup
 
+from operations import slugify
 
-def call_stuff(game_id: str, page_id: int) -> dict:
 
+def make_bgg_api_call(game_id: str, page_id: int) -> tuple[dict, bool]:
+    """Makes a call to the bgg api. Returns retrieved data
+
+    Args:
+        game_id (str): ID of the game
+        page_id (int): number of rating page
+
+    Returns:
+        dict: Returned json object from api call transformed into a python dict
+        bool: Returns False if the json contains an "errors" field
+    """
     url = f"https://api.geekdo.com/api/collections?objectid={game_id}&objecttype=thing&oneperuser=1&pageid={page_id}&require_review=true&showcount=50&sort=review_tstamp"
     get_response = requests.get(url)
     received_json_bytes = json.loads(get_response.content)
 
-    return received_json_bytes
+    # Check for errors in the return
+    if "errors" in received_json_bytes:
+        print(received_json_bytes["errors"])
+        return received_json_bytes, False
+
+    return received_json_bytes, True
 
 
 def get_game_name(game_id: str) -> str:
@@ -33,7 +49,10 @@ def get_game_name(game_id: str) -> str:
     ld_json_tag = soup.find("script", attrs={"type": "application/ld+json"})
     info = json.loads(ld_json_tag.string)
 
-    return info["name"]
+    # clean name of illegal characters
+    cleaned_name = slugify(info["name"])
+
+    return cleaned_name
 
 
 def create_data_structure(user_item_bytes: bytes) -> list:
@@ -42,7 +61,7 @@ def create_data_structure(user_item_bytes: bytes) -> list:
 
     for user_item in user_item_bytes["items"]:
 
-        comment = user_item["textfield"]["comment"]["value"]
+        comment: str = user_item["textfield"]["comment"]["value"]
         if comment is not None:
             comment = comment.strip().replace("\n", " ")
 
@@ -77,9 +96,10 @@ def create_data_structure(user_item_bytes: bytes) -> list:
 
 def flow(game_id: str):
 
-    game_name = get_game_name(game_id).replace(" ", "_")
+    sleep_time = 3.8
 
-    i = 1
+    game_name = get_game_name(game_id)
+
     output_path = os.path.join("csv", f"{game_id}_{game_name}_rating_items.csv")
     Path("csv").mkdir(parents=True, exist_ok=True)
 
@@ -92,39 +112,58 @@ def flow(game_id: str):
     found_items = True
     start_time = datetime.now()
 
-    while found_items:
+    page_counter = 1
+    fail_counter = 1
+    while found_items and fail_counter < 10:
 
-        time.sleep(4)
+        time.sleep(3.8)
 
-        json_bytes = call_stuff(game_id, i)
+        json_bytes, ok = make_bgg_api_call(game_id, page_counter)
+        if not ok:
+            sleep_time = sleep_time + 0.1
+            fail_counter = fail_counter + 1
+            # wait to not directly run into request limit again
+            time.sleep(5)
+            continue
 
         user_dict_list = create_data_structure(json_bytes)
-
-        pandas.DataFrame(user_dict_list).to_csv(
-            output_path, mode="a", header=not os.path.exists(output_path), index=False
-        )
 
         print(
             ". . . . . . . . . . .\n"
             + "Current run time: "
             + str(datetime.now() - start_time)
-            + "\nRatings: "
-            + str((i - 1) * 50)
+            + "\nPage: "
+            + str(page_counter)
+            + " Ratings: "
+            + str((page_counter - 1) * 50)
             + " to "
-            + str(i * 50)
+            + str(page_counter * 50)
+            + f"; one request every {sleep_time} seconds"
         )
-
         if len(user_dict_list) == 0:
+
             found_items = False
             print("Reached last ratings")
             print("-----------------------------------")
+            break
 
-        i = i + 1
+        pandas.DataFrame(user_dict_list).to_csv(
+            output_path, mode="a", header=not os.path.exists(output_path), index=False
+        )
+
+        page_counter = page_counter + 1
+        fail_counter = 0
+
+    if fail_counter > 10:
+        with open(output_path, "a", encoding="utf-8") as csv_file:
+            csv_file.write("Did not get all the data\n")
+
+    return
 
 
 def main():
 
-    game_id = "167355"
+    game_id = "199792"
 
     flow(game_id)
 
