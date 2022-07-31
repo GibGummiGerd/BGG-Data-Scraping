@@ -96,7 +96,7 @@ def create_json_of_top_games(
     with open(output, "w", encoding="utf-8") as json_file:
         json.dump(list_of_ranks, json_file)
 
-    print(f"Succesfully found the top {to_rank} games.")
+    print(f"Successfully found the top {to_rank} games.")
 
 
 if __name__ == "__main__":
