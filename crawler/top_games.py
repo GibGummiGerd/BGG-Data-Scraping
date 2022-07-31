@@ -87,7 +87,6 @@ def create_json_of_top_games(
         time.sleep(4)
 
     output = ""
-    print(use_no_date)
     if use_no_date is True:
         output = f"{directory_path}/bgg_top_{to_rank}.json"
     else:
