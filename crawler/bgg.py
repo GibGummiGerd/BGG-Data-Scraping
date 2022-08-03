@@ -23,8 +23,11 @@ def make_bgg_api_call(game_id: str, page_id: int) -> tuple[dict, bool]:
         dict: Returned json object from api call transformed into a python dict
         bool: Returns False if the json contains an "errors" field
     """
+
     url = f"https://api.geekdo.com/api/collections?objectid={game_id}&objecttype=thing&oneperuser=1&pageid={page_id}&require_review=true&showcount=50&sort=review_tstamp"
+
     get_response = requests.get(url)
+
     received_json_bytes = json.loads(get_response.content)
 
     # Check for errors in the return
@@ -33,6 +36,16 @@ def make_bgg_api_call(game_id: str, page_id: int) -> tuple[dict, bool]:
         return received_json_bytes, False
 
     return received_json_bytes, True
+
+
+def get_list_of_ids() -> list[int]:
+    list_of_games: list[dict] = []
+    list_of_ids: list[int] = []
+    with open("bgg_top_1000_2022-07-31.json", encoding="utf-8") as json_file:
+        list_of_games = json.load(json_file)
+    for game in list_of_games:
+        list_of_ids.append(game["id"])
+    return list_of_ids
 
 
 def get_game_name(game_id: str) -> str:
@@ -94,7 +107,7 @@ def create_data_structure(user_item_bytes: bytes) -> list:
     return user_items
 
 
-def flow(game_id: str):
+def get_ratings_for_game(game_id: str):
 
     sleep_time = 3.8
 
@@ -116,7 +129,7 @@ def flow(game_id: str):
     fail_counter = 1
     while found_items and fail_counter < 10:
 
-        time.sleep(3.8)
+        time.sleep(sleep_time)
 
         json_bytes, ok = make_bgg_api_call(game_id, page_counter)
         if not ok:
@@ -130,11 +143,9 @@ def flow(game_id: str):
 
         print(
             ". . . . . . . . . . .\n"
-            + "Current run time: "
+            + f"Game: {game_name} (ID: {game_id}) \nCurrent run time: "
             + str(datetime.now() - start_time)
-            + "\nPage: "
-            + str(page_counter)
-            + " Ratings: "
+            + f"\nPage: {page_counter}\nRatings: "
             + str((page_counter - 1) * 50)
             + " to "
             + str(page_counter * 50)
@@ -151,21 +162,47 @@ def flow(game_id: str):
             output_path, mode="a", header=not os.path.exists(output_path), index=False
         )
 
+        with open(f"csv/tmp_{game_id}.txt", "w", encoding="utf-8") as temp_file:
+            temp_file.write(
+                f"id: {game_id}\npage: {page_counter}\nrating: {page_counter * 50}"
+            )
+
         page_counter = page_counter + 1
         fail_counter = 0
 
     if fail_counter > 10:
         with open(output_path, "a", encoding="utf-8") as csv_file:
             csv_file.write("Did not get all the data\n")
+        return
+
+    with open("csv/finished.txt", "a", encoding="utf-8") as finished_file:
+        finished_file.write(f"{game_id}\n")
+
+    os.remove(f"csv/tmp_{game_id}.txt")
 
     return
 
 
 def main():
 
-    game_id = "199792"
+    ids_to_be_collected = []
+    with open("top_games/bgg_top_1000.json", encoding="utf-8") as json_file:
+        list_of_top_games = json.load(json_file)
+        for game in list_of_top_games:
+            ids_to_be_collected.append(game["id"])
 
-    flow(game_id)
+    collected_games = os.listdir("csv")
+
+    for game_id in ids_to_be_collected:
+        if any(game_id in csv_file for csv_file in collected_games):
+            print(f"Already have game with id {game_id}")
+            continue
+        print(f"Will now collect game with id {game_id}")
+        get_ratings_for_game(game_id)
+
+        # further = input("Continue? Just hit Enter")
+        # if further != "":
+        #     break
 
 
 if __name__ == "__main__":
