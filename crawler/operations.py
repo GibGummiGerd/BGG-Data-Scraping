@@ -1,4 +1,5 @@
 import unicodedata
+import os
 import re
 
 
@@ -21,3 +22,22 @@ def slugify(value, allow_unicode=False):
         )
     value = re.sub(r"[^\w\s-]", "", value.lower())
     return re.sub(r"[-\s]+", "_", value).strip("-_")
+
+
+def check_path_for_file_name_with_substring(
+    string_to_check: str, relative_path: str
+) -> bool:
+    """Checks if a file with a given substring exists in a directory.
+
+    Args:
+        string_to_check (str): Substring which is searched for in file names.
+        relative_path (str): Relative path to folder which is searched.
+
+    Returns:
+        bool: True is a file with substring in name exists.
+    """
+    list_of_files = os.listdir(relative_path)
+    for file in list_of_files:
+        if string_to_check in file:
+            return True
+    return False
