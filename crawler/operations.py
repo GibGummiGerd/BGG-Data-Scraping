@@ -1,6 +1,8 @@
 import unicodedata
 import os
 import re
+import time
+import requests
 
 
 def slugify(value, allow_unicode=False):
@@ -41,3 +43,39 @@ def check_path_for_file_name_with_substring(
         if string_to_check in file:
             return True
     return False
+
+
+def get_request(url: str) -> requests.Response:
+    """_summary_
+
+    Args:
+        url (str): _description_
+
+    Raises:
+        SystemExit: _description_
+        SystemExit: _description_
+        SystemExit: _description_
+
+    Returns:
+        requests.Response: _description_
+    """
+
+    sleep_time = 0
+
+    while True:
+        try:
+            get_response = requests.get(url)
+        except requests.exceptions.Timeout:
+            sleep_time += 1
+            print(f"Request timed out. Will wait {sleep_time} seconds and try again")
+            time.sleep(sleep_time)
+        except requests.exceptions.TooManyRedirects as err:
+            raise SystemExit(err) from err
+        except requests.exceptions.HTTPError as err:
+            raise SystemExit(err) from err
+        except requests.exceptions.RequestException as err:
+            raise SystemExit(err) from err
+
+        break
+
+    return get_response
