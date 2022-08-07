@@ -1,3 +1,5 @@
+"""bgg.py"""
+
 import json
 
 from bs4 import BeautifulSoup
@@ -48,3 +50,21 @@ def find_game_name(game_id: str) -> str:
     game_name_cleaned = info["name"].lstrip().rstrip()
 
     return game_name_cleaned
+
+
+def find_game_info(game_id: str) -> dict:
+
+    url = f"https://boardgamegeek.com/boardgame/{game_id}"
+    get_response = get_request(url)
+
+    soup = BeautifulSoup(get_response.text, "html.parser")
+    ld_json_tag = soup.find("script", attrs={"type": "application/ld+json"})
+    all_info: dict = json.loads(ld_json_tag.string)
+
+    game_info = {
+        "id": game_id,
+        "voters": int(all_info["aggregateRating"]["reviewCount"]),
+        "name": all_info["name"].lstrip().rstrip(),
+    }
+
+    return game_info
