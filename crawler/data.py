@@ -5,7 +5,12 @@ import pandas
 import operations
 
 PROGRESS_FOLDER = "progress"
+PROGRESS_ID = "id"
+PROGRESS_PAGE = "page"
+PROGRESS_RATING = "rating"
+
 CSV_FOLDER = "csv"
+
 FINISHED_FILE = "finished.txt"
 
 
@@ -52,7 +57,11 @@ def save_progress(game_id: str, page_counter: str):
 
     Path(PROGRESS_FOLDER).mkdir(parents=True, exist_ok=True)
 
-    progress = {"id": game_id, "last_page": page_counter, "rating": page_counter * 50}
+    progress = {
+        PROGRESS_ID: game_id,
+        PROGRESS_PAGE: page_counter,
+        PROGRESS_RATING: page_counter * 50,
+    }
 
     with open(create_progress_path(game_id), "w", encoding="utf-8") as temp_file:
         temp_file.write(json.dumps(progress))

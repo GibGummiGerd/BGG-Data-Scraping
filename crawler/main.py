@@ -1,14 +1,18 @@
+#!/usr/bin/env python3
+
 """bgg.py"""
 
 from datetime import datetime
-from pathlib import Path
 import time
 import os
 import json
 import argparse
+import sys
 
 import bgg
 import data
+
+MAX_FAILS = 250
 
 
 def collect_ratings(game_id: str, page_counter: int = 1):
@@ -24,7 +28,7 @@ def collect_ratings(game_id: str, page_counter: int = 1):
     start_time = datetime.now()
     fail_counter = 1
 
-    while fail_counter < 10:
+    while fail_counter < MAX_FAILS:
 
         # sleep to stay under the request limit
         time.sleep(sleep_time)
@@ -64,10 +68,9 @@ def collect_ratings(game_id: str, page_counter: int = 1):
         page_counter += 1
         fail_counter = 0
 
-    if fail_counter >= 10:
-        with open(output_path, "a", encoding="utf-8") as csv_file:
-            csv_file.write("Did not get all the data\n")
-        return
+    if fail_counter >= MAX_FAILS:
+        print(f"Failed {MAX_FAILS} times in  a row to get a request. Ending process.")
+        sys.exit()
 
     data.add_game_to_finished(game_id)
     data.delete_progress_file(game_id)
@@ -79,8 +82,8 @@ def finish_games():
 
     unfinished_games = data.get_unfinished_games()
     for game in unfinished_games:
-        game_id = game["id"]
-        collect_ratings(game_id, page_counter=game["page"])
+        game_id = game[data.PROGRESS_ID]
+        collect_ratings(game_id, page_counter=game[data.PROGRESS_PAGE])
 
         print("now remove duplicates")
 
