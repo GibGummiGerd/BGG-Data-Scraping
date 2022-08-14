@@ -22,7 +22,7 @@ def create_list_of_rating_items(user_item_bytes: bytes) -> list:
 
         comment: str = user_item["textfield"]["comment"]["value"]
         if comment is not None:
-            comment = comment.strip().replace("\n", " ")
+            comment = comment.strip().replace("\n", " ").replace("\r", " ")
 
         status = user_item["status"]
         own = False
