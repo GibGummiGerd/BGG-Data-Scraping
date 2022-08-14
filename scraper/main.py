@@ -78,7 +78,7 @@ def collect_ratings(game_id: str, page_counter: int = 1):
     return
 
 
-def finish_games():
+def complete_games():
 
     unfinished_games = data.get_unfinished_games()
     for game in unfinished_games:
@@ -100,26 +100,60 @@ def main():
 
     # -db DATABSE -u USERNAME -p PASSWORD -size 20
     parser.add_argument(
-        "-f",
-        "--finish",
-        dest="finish",
+        "-c",
+        "--complete",
+        dest="complete",
         help="Set if you want to complete unfinished games",
         action=argparse.BooleanOptionalAction,
     )
+    parser.add_argument(
+        "-i",
+        "--id",
+        dest="id",
+        help="Set if you want to get a specific game",
+        type=int,
+        default=0,
+    )
+    parser.add_argument(
+        "-f",
+        "--file",
+        dest="file",
+        help="Set if you want to get a specific game",
+        type=str,
+    )
     args = parser.parse_args()
 
-    if args.finish is True:
-        finish_games()
+    if args.complete is True:
+        complete_games()
         return
 
-    ids_to_be_collected: list[str] = []
-    list_of_top_games: list[dict] = []
-    with open("top_games/bgg_top_1000.json", encoding="utf-8") as json_file:
-        list_of_top_games = json.load(json_file)
-        for game in list_of_top_games:
-            ids_to_be_collected.append(game["id"])
+    if args.id > 0:
+        collect_ratings(args.id)
+        return
 
-    collected_games = os.listdir(data.CSV_FOLDER)
+    if args.file == "":
+        print("No file given which specifies which ids are to be collected")
+        sys.exit()
+
+    ids_to_be_collected: list[str] = []
+
+    try:
+        with open(args.file, "r", encoding="utf-8") as f:
+            for line in f:
+                ids_to_be_collected.append(int(line.strip()))
+        # with open("top_games/bgg_top_1000.json", encoding="utf-8") as json_file:
+        #     list_of_top_games = json.load(json_file)
+        #     for game in list_of_top_games:
+        #         ids_to_be_collected.append(game["id"])
+    except Exception as err:
+        print(err)
+        sys.exit()
+
+    collected_games = []
+    try:
+        collected_games = os.listdir(data.CSV_FOLDER)
+    except FileNotFoundError:
+        os.mkdir(data.CSV_FOLDER)
 
     for game_id in ids_to_be_collected:
 
@@ -128,10 +162,6 @@ def main():
             print(f"Already have game with id {game_id}")
             continue
         print(f"Will now collect game with id {game_id}")
-
-        # game_information = next(
-        #     game for game in list_of_top_games if game["id"] == game_id
-        # )
 
         collect_ratings(game_id)
 
