@@ -121,6 +121,13 @@ def main():
         help="Set if you want to get a specific game",
         type=str,
     )
+    parser.add_argument(
+        "-u",
+        "--update",
+        dest="update",
+        help="Update existing files in csv folder with new ratings",
+        type=str,
+    )
     args = parser.parse_args()
 
     if args.complete is True:
@@ -140,7 +147,7 @@ def main():
     try:
         with open(args.file, "r", encoding="utf-8") as f:
             for line in f:
-                ids_to_be_collected.append(int(line.strip()))
+                ids_to_be_collected.append(line.strip().lstrip().rstrip())
         # with open("top_games/bgg_top_1000.json", encoding="utf-8") as json_file:
         #     list_of_top_games = json.load(json_file)
         #     for game in list_of_top_games:

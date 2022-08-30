@@ -1,9 +1,11 @@
 """bgg.py"""
 
 import json
+import sys
 
 from bs4 import BeautifulSoup
 from operations import get_request
+from const import BGG_BOARDGAME_URL
 
 
 def rating_request(game_id: str, page_id: int) -> tuple[dict, bool]:
@@ -21,7 +23,12 @@ def rating_request(game_id: str, page_id: int) -> tuple[dict, bool]:
     url = f"https://api.geekdo.com/api/collections?objectid={game_id}&objecttype=thing&oneperuser=1&pageid={page_id}&require_review=true&showcount=50&sort=review_tstamp"
     get_response = get_request(url)
 
-    received_json_bytes = json.loads(get_response.content)
+    try:
+        received_json_bytes = json.loads(get_response.content)
+    except Exception as err:
+        print(err)
+        print(get_response.content)
+        sys.exit()
 
     # Check for errors in the return
     if "errors" in received_json_bytes:
@@ -40,7 +47,7 @@ def find_game_name(game_id: str) -> str:
     Returns:
         str: _description_
     """
-    url = f"https://boardgamegeek.com/boardgame/{game_id}"
+    url = bgg_boardgame_url(game_id)
     get_response = get_request(url)
 
     soup = BeautifulSoup(get_response.text, "html.parser")
@@ -54,7 +61,7 @@ def find_game_name(game_id: str) -> str:
 
 def find_game_info(game_id: str) -> dict:
 
-    url = f"https://boardgamegeek.com/boardgame/{game_id}"
+    url = bgg_boardgame_url(game_id)
     get_response = get_request(url)
 
     soup = BeautifulSoup(get_response.text, "html.parser")
@@ -68,3 +75,16 @@ def find_game_info(game_id: str) -> dict:
     }
 
     return game_info
+
+
+def bgg_boardgame_url(game_id) -> str:
+    """Creates the URL to a specific game on BGG
+
+    Args:
+        game_id (_type_): _description_
+
+    Returns:
+        str: _description_
+    """
+    game_id = str(game_id)
+    return f"{BGG_BOARDGAME_URL}{game_id}"
