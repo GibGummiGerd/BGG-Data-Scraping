@@ -4,8 +4,9 @@ import json
 import sys
 
 from bs4 import BeautifulSoup
+
 from operations import get_request
-from const import BGG_BOARDGAME_URL
+from const import *
 
 
 def rating_request(game_id: str, page_id: int) -> tuple[dict, bool]:
@@ -20,7 +21,7 @@ def rating_request(game_id: str, page_id: int) -> tuple[dict, bool]:
         bool: Returns False if the json contains an "errors" field
     """
 
-    url = f"https://api.geekdo.com/api/collections?objectid={game_id}&objecttype=thing&oneperuser=1&pageid={page_id}&require_review=true&showcount=50&sort=review_tstamp"
+    url = f"https://api.geekdo.com/api/collections?objectid={game_id}&objecttype=thing&oneperuser=1&pageid={page_id}&require_review=true&showcount={RATING_COUNT}&sort=review_tstamp"
     get_response = get_request(url)
 
     try:
