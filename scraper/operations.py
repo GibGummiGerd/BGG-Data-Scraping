@@ -1,8 +1,10 @@
+from datetime import datetime
 import unicodedata
 import os
 import re
 import time
 import requests
+import numpy
 
 
 def slugify(value, allow_unicode=False):
@@ -79,3 +81,33 @@ def get_request(url: str) -> requests.Response:
         break
 
     return get_response
+
+
+def later_date(date1, date2):
+
+    if isinstance(date1, str):
+        str_to_time(date1)
+    elif not isinstance(date1, datetime):
+        date1 = numpy.nan
+    if isinstance(date2, str):
+        str_to_time(date2)
+    elif not isinstance(date2, datetime):
+        date2 = numpy.nan
+
+    if date1 == date2:
+        return date1
+    if date1 is numpy.nan:
+        return date2
+    if date2 is numpy.nan:
+        return date1
+    if date1 > date2:
+        return date1
+    return date2
+
+
+def str_to_time(date: str) -> datetime:
+
+    if not isinstance(date, str):
+        return numpy.nan
+
+    return datetime.strptime(date, "%Y-%m-%d %H:%M:%S")

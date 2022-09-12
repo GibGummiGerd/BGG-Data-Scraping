@@ -8,11 +8,12 @@ import os
 import json
 import argparse
 import sys
+import pandas
 
 import bgg
 import data
-
-MAX_FAILS = 250
+import update_games
+from const import *
 
 
 def collect_ratings(game_id: str, page_counter: int = 1):
@@ -24,7 +25,7 @@ def collect_ratings(game_id: str, page_counter: int = 1):
 
     output_path = data.create_rating_items_path(game_id, game_name)
 
-    sleep_time = 3.8
+    sleep_time = SLEEP_TIME
     start_time = datetime.now()
     fail_counter = 1
 
@@ -82,8 +83,8 @@ def complete_games():
 
     unfinished_games = data.get_unfinished_games()
     for game in unfinished_games:
-        game_id = game[data.PROGRESS_ID]
-        collect_ratings(game_id, page_counter=game[data.PROGRESS_PAGE])
+        game_id = game[PROGRESS_ID]
+        collect_ratings(game_id, page_counter=game[PROGRESS_PAGE])
 
         print("now remove duplicates")
 
@@ -126,7 +127,7 @@ def main():
         "--update",
         dest="update",
         help="Update existing files in csv folder with new ratings",
-        type=str,
+        action=argparse.BooleanOptionalAction,
     )
     args = parser.parse_args()
 
@@ -138,29 +139,36 @@ def main():
         collect_ratings(args.id)
         return
 
-    if args.file == "":
+    ranking_file = args.file
+
+    if ranking_file == "":
         print("No file given which specifies which ids are to be collected")
         sys.exit()
 
-    ids_to_be_collected: list[str] = []
+    ids_to_be_collected = []
 
     try:
-        with open(args.file, "r", encoding="utf-8") as f:
-            for line in f:
-                ids_to_be_collected.append(line.strip().lstrip().rstrip())
-        # with open("top_games/bgg_top_1000.json", encoding="utf-8") as json_file:
-        #     list_of_top_games = json.load(json_file)
-        #     for game in list_of_top_games:
-        #         ids_to_be_collected.append(game["id"])
+        if ranking_file.lower().endswith(".txt"):
+            with open(ranking_file, "r", encoding="utf-8") as f:
+                for line in f:
+                    ids_to_be_collected.append(line.strip().lstrip().rstrip())
+        elif ranking_file.lower().endswith(".csv"):
+            data_frame = pandas.read_csv(ranking_file)
+            ids_to_be_collected = data_frame["ID"].to_list()
     except Exception as err:
         print(err)
         sys.exit()
 
+    if args.update is True:
+        print(ids_to_be_collected)
+        update_games.update_games(ids_to_be_collected)
+        return
+
     collected_games = []
     try:
-        collected_games = os.listdir(data.CSV_FOLDER)
+        collected_games = os.listdir(CSV_FOLDER)
     except FileNotFoundError:
-        os.mkdir(data.CSV_FOLDER)
+        os.mkdir(CSV_FOLDER)
 
     for game_id in ids_to_be_collected:
 

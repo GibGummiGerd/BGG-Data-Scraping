@@ -4,14 +4,7 @@ from pathlib import Path
 import pandas
 import operations
 
-PROGRESS_FOLDER = "progress"
-PROGRESS_ID = "id"
-PROGRESS_PAGE = "page"
-PROGRESS_RATING = "rating"
-
-CSV_FOLDER = "csv"
-
-FINISHED_FILE = "finished.txt"
+from const import *
 
 
 def create_list_of_rating_items(user_item_bytes: bytes) -> list:
@@ -69,12 +62,15 @@ def save_progress(game_id: str, page_counter: str):
     return
 
 
-def save_rating_item(dict_list: list[dict], output_path: str):
+def save_rating_item(dict_list: list[dict], output_path: str, write_mode="a"):
 
     Path(CSV_FOLDER).mkdir(parents=True, exist_ok=True)
 
     pandas.DataFrame(dict_list).to_csv(
-        output_path, mode="a", header=not os.path.exists(output_path), index=False
+        output_path,
+        mode=write_mode,
+        header=write_mode == "w",
+        index=False,
     )
 
 
@@ -126,3 +122,9 @@ def add_game_to_finished(game_id: str):
         os.path.join(PROGRESS_FOLDER, FINISHED_FILE), "a", encoding="utf-8"
     ) as finished_file:
         finished_file.write(f"{game_id}\n")
+
+
+def create_latest_tstamp_column(row):
+    x = operations.later_date(row[RATING_DATETIME], row[COMMENT_DATETIME])
+    print(x)
+    return x
