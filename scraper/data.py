@@ -5,6 +5,7 @@ import pandas
 import operations
 
 from const import *
+from files import *
 
 
 def create_list_of_rating_items(user_item_bytes: bytes) -> list:
@@ -37,9 +38,11 @@ def create_list_of_rating_items(user_item_bytes: bytes) -> list:
             "own": own,
             "prevowned": prevowned,
             "wishlist": wishlist,
-            "textfield": comment,
+            "comment": comment,
             "rating_tstamp": user_item["rating_tstamp"],
             "comment_tstamp": user_item["comment_tstamp"],
+            "review_tstamp": user_item["review_tstamp"],
+            "postdate": user_item["postdate"],
         }
         user_items.append(user_item)
 
@@ -62,37 +65,28 @@ def save_progress(game_id: str, page_counter: str):
     return
 
 
-def save_rating_item(dict_list: list[dict], output_path: str, write_mode="a"):
+def save_rating_item_dict(dict_list: list[dict], output_path: str, write_mode="a"):
 
     Path(CSV_FOLDER).mkdir(parents=True, exist_ok=True)
 
-    pandas.DataFrame(dict_list).to_csv(
+    data_frame = pandas.DataFrame(dict_list)
+    data_frame = remove_bad_data(data_frame)
+
+    data_frame.to_csv(
         output_path,
         mode=write_mode,
-        header=write_mode == "w",
+        # if write mode is w, a header will be cerated
+        header=not os.path.isfile(output_path),
         index=False,
     )
-
-
-def delete_progress_file(game_id: str):
-    os.remove(create_progress_path(game_id))
-
-
-def create_progress_path(game_id: str) -> str:
-    return os.path.join(PROGRESS_FOLDER, f"{game_id}_progress.json")
-
-
-def create_rating_items_path(game_id: str, game_name: str):
-
-    game_name = operations.slugify(game_name)
-
-    return os.path.join(CSV_FOLDER, f"{game_id}_{game_name}_rating_items.csv")
 
 
 def remove_duplicates_from_csv(filepath: str):
 
     data_frame = pandas.read_csv(filepath)
-    data_frame = data_frame.drop_duplicates()
+    data_frame.sort_values(by=LATEST_TSTAMP, inplace=True, ascending=False)
+    data_frame.reset_index(drop=True, inplace=True)
+    data_frame.drop_duplicates(subset=[USERNAME], inplace=True, keep="first")
     data_frame.to_csv(filepath, mode="w", header=True, index=False)
 
 
@@ -125,6 +119,23 @@ def add_game_to_finished(game_id: str):
 
 
 def create_latest_tstamp_column(row):
-    x = operations.later_date(row[RATING_DATETIME], row[COMMENT_DATETIME])
-    print(x)
-    return x
+    return operations.later_date(row[RATING_DATETIME], row[COMMENT_DATETIME])
+
+
+def remove_bad_data(data_frame: pandas.DataFrame):
+    data_frame.drop(
+        data_frame.loc[
+            (data_frame[RATING_DATETIME] == "0000-00-00 00:00:00")
+            & (data_frame[COMMENT_DATETIME] == "0000-00-00 00:00:00")
+        ].index,
+        inplace=True,
+    )
+    data_frame.replace(
+        {
+            RATING_DATETIME: "0000-00-00 00:00:00",
+            COMMENT_DATETIME: "0000-00-00 00:00:00",
+        },
+        numpy.nan,
+        inplace=True,
+    )
+    return data_frame

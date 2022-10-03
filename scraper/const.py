@@ -22,6 +22,6 @@ RATING_COUNT = 50
 USERNAME = "username"
 RATING_DATETIME = "rating_tstamp"
 COMMENT_DATETIME = "comment_tstamp"
-LATEST_DATETIME = "latest_tstamp"
+LATEST_TSTAMP = "review_tstamp"
 
 ZERO_DATETIME = "0000-00-00 00:00:00"

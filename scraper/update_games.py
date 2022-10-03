@@ -6,11 +6,11 @@ import sys
 import os
 import numpy
 
-from bgg import rating_request
-import data
-import files
+from bgg import *
+from data import *
+from files import *
 from const import *
-from operations import later_date, str_to_time
+from operations import *
 
 
 def get_new_ratings(game_id, page_id, max_fails=MAX_FAILS, sleep_time=SLEEP_TIME):
@@ -24,7 +24,7 @@ def get_new_ratings(game_id, page_id, max_fails=MAX_FAILS, sleep_time=SLEEP_TIME
             time.sleep(sleep_time)
             continue
 
-        return data.create_list_of_rating_items(json_bytes)
+        return create_list_of_rating_items(json_bytes)
 
     print(f"Failed {max_fails} times in  a row to get a request. Ending process.")
     sys.exit()
@@ -33,33 +33,28 @@ def get_new_ratings(game_id, page_id, max_fails=MAX_FAILS, sleep_time=SLEEP_TIME
 def update_ratings(game_id, csv_file):
 
     # get existing csv file
-    data_frame = files.open_csv_by_name(csv_file)
-
-    print(data_frame.iloc[6][COMMENT_DATETIME])
+    data_frame = open_csv_by_name(csv_file)
 
     # latest date in existing csv file
-    last_date = ""
+    last_date = numpy.nan
     counter = 0
-    while last_date == "":
+    while pandas.isna(last_date):
         last_date = later_date(
             str_to_time(data_frame.iloc[counter][RATING_DATETIME]),
             str_to_time(data_frame.iloc[counter][COMMENT_DATETIME]),
         )
         counter = counter + 1
 
-    retrieved_ratings = []
     page_counter = 1
 
     while True:
+        retrieved_ratings = []
         retrieved_ratings = retrieved_ratings + get_new_ratings(game_id, page_counter)
 
-        print((retrieved_ratings[49][RATING_DATETIME]))
-        print((retrieved_ratings[49][COMMENT_DATETIME]))
-
-        last_date_of_current_ratings = None
+        last_date_of_retrieved_ratings = None
         counter = 1
-        while last_date_of_current_ratings == None:
-            last_date_of_current_ratings = later_date(
+        while pandas.isna(last_date_of_retrieved_ratings):
+            last_date_of_retrieved_ratings = later_date(
                 str_to_time(retrieved_ratings[RATING_COUNT - counter][RATING_DATETIME]),
                 str_to_time(
                     retrieved_ratings[RATING_COUNT - counter][COMMENT_DATETIME]
@@ -67,15 +62,15 @@ def update_ratings(game_id, csv_file):
             )
             counter = counter + 1
 
-        print("current " + str(last_date_of_current_ratings))
-        print("update " + str(last_date))
-
         # Ältester schon vorhandener Eintrag ist älter als neuer
-        if last_date >= last_date_of_current_ratings:
-            retrieved_ratings = pandas.DataFrame.from_dict(retrieved_ratings)
-            data_frame = pandas.concat(
-                [retrieved_ratings, data_frame], ignore_index=True
-            )
+
+        retrieved_ratings = pandas.DataFrame.from_dict(retrieved_ratings)
+        data_frame = pandas.concat([retrieved_ratings, data_frame], ignore_index=True)
+
+        print(f"Date reached: {last_date_of_retrieved_ratings}")
+        print(f"Date in csv: {last_date}")
+
+        if last_date >= last_date_of_retrieved_ratings:
 
             data_frame.replace(
                 {
@@ -86,30 +81,31 @@ def update_ratings(game_id, csv_file):
                 inplace=True,
             )
 
-            data_frame[LATEST_DATETIME] = data_frame.apply(
-                data.create_latest_tstamp_column,
+            data_frame[LATEST_TSTAMP] = data_frame.apply(
+                create_latest_tstamp_column,
                 axis=1,
             )
 
-            data_frame = data_frame[data_frame[LATEST_DATETIME].notnull()]
+            data_frame = data_frame[data_frame[LATEST_TSTAMP].notnull()]
+
+            data_frame.sort_values(by=LATEST_TSTAMP, inplace=True, ascending=False)
 
             data_frame.reset_index(drop=True, inplace=True)
 
-            data_frame.sort_values(by=LATEST_DATETIME, inplace=True, ascending=False)
-
-            duppies = data_frame.duplicated(subset=[USERNAME], keep=False)
-            for index, value in duppies.items():
-                if value:
-                    print(index)
-                    print(data_frame.iloc[index][USERNAME])
-
             data_frame.drop_duplicates(subset=[USERNAME], inplace=True, keep="first")
 
-            data.save_rating_item(data_frame, csv_file, write_mode="w")
-            return
+            game_info = find_game_info(game_id)
+            output_filename = create_csv_file_name_with_date(game_id, game_info["name"])
+            output_filepath = os.path.join(CSV_FOLDER, output_filename)
+
+            save_rating_item_dict(data_frame, output_filepath, write_mode="w")
+
+            return output_filename
 
         page_counter = page_counter + 1
-        break
+
+        time.sleep(SLEEP_TIME)
+
     return
 
 
@@ -123,12 +119,23 @@ def update_games(games_to_be_updated):
     # remove duplicates
     # save new items
 
-    found_csv = files.find_csv_by_id(games_to_be_updated)
+    print(games_to_be_updated)
+
+    found_csv = find_csv_by_id(games_to_be_updated)
 
     for game_id, csv_file in found_csv.items():
-        update_ratings(game_id, csv_file)
+
+        print(f"working on ID {game_id}, remaining {len(games_to_be_updated)}")
+
+        updated_file = update_ratings(game_id, csv_file)
         games_to_be_updated.remove(game_id)
 
-    print(found_csv)
-    print(games_to_be_updated)
+        if updated_file != csv_file:
+            os.remove(create_csv_folder_path_from_filename(csv_file))
+
+        print(f"finished ID {game_id}")
+
+        with open("finished.txt", "a") as f:
+            f.write(f"{game_id}\n")
+
     return

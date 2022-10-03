@@ -11,7 +11,7 @@ import sys
 import pandas
 
 import bgg
-import data
+from data import *
 import update_games
 from const import *
 
@@ -23,7 +23,7 @@ def collect_ratings(game_id: str, page_counter: int = 1):
     game_name = game_info["name"]
     estimated_ratings = game_info["voters"] * 1.03
 
-    output_path = data.create_rating_items_path(game_id, game_name)
+    output_path = create_csv_folder_path_from_id_and_name(game_id, game_name)
 
     sleep_time = SLEEP_TIME
     start_time = datetime.now()
@@ -42,7 +42,7 @@ def collect_ratings(game_id: str, page_counter: int = 1):
             time.sleep(5)
             continue
 
-        user_dict_list = data.create_list_of_rating_items(json_bytes)
+        user_dict_list = create_list_of_rating_items(json_bytes)
 
         estimated_time = (estimated_ratings / 50 - page_counter) * sleep_time
         estimated_min = int(estimated_time // 60)
@@ -52,8 +52,8 @@ def collect_ratings(game_id: str, page_counter: int = 1):
             print("Reached last ratings \n--END FLOW--")
             break
 
-        data.save_rating_item(user_dict_list, output_path)
-        data.save_progress(game_id, page_counter)
+        save_rating_item_dict(user_dict_list, output_path)
+        save_progress(game_id, page_counter)
 
         print(
             ". . . . . . . . . . .\n"
@@ -73,15 +73,15 @@ def collect_ratings(game_id: str, page_counter: int = 1):
         print(f"Failed {MAX_FAILS} times in  a row to get a request. Ending process.")
         sys.exit()
 
-    data.add_game_to_finished(game_id)
-    data.delete_progress_file(game_id)
+    add_game_to_finished(game_id)
+    delete_progress_file(game_id)
 
     return
 
 
 def complete_games():
 
-    unfinished_games = data.get_unfinished_games()
+    unfinished_games = get_unfinished_games()
     for game in unfinished_games:
         game_id = game[PROGRESS_ID]
         collect_ratings(game_id, page_counter=game[PROGRESS_PAGE])
@@ -89,8 +89,8 @@ def complete_games():
         print("now remove duplicates")
 
         game_name = bgg.find_game_name(game_id)
-        filepath = data.create_rating_items_path(game_id, game_name)
-        data.remove_duplicates_from_csv(filepath)
+        filepath = create_csv_folder_path_from_id_and_name(game_id, game_name)
+        remove_duplicates_from_csv(filepath)
 
     return
 
@@ -172,17 +172,21 @@ def main():
 
     for game_id in ids_to_be_collected:
 
+        print(game_id)
         # Check if we already have a csv file starting with the id
-        if any(game_id == csv_file.split("_")[0] for csv_file in collected_games):
+        if any(
+            does_file_name_start_with_id(game_id, csv_file)
+            for csv_file in collected_games
+        ):
             print(f"Already have game with id {game_id}")
             continue
         print(f"Will now collect game with id {game_id}")
 
-        collect_ratings(game_id)
+        collect_ratings(str(game_id))
 
-        # further = input("Continue? Just hit Enter")
-        # if further != "":
-        #     break
+    # further = input("Continue? Just hit Enter")
+    # if further != "":
+    #     break
 
 
 if __name__ == "__main__":
